@@ -35,7 +35,7 @@ local function SlotShortName(report, slotKey)
 	if not slotKey then
 		return "Gear"
 	end
-	local equipment = report.equipment or report.slots or {}
+	local equipment = Addon:GetGearCheckEquipment(report)
 	for index = 1, #equipment do
 		local slot = equipment[index]
 		if slot.key == slotKey then
@@ -113,7 +113,7 @@ function Addon:BuildGearCheckCategoryTooltipLines(report, categoryKey, maxLines)
 	end
 
 	if result.grade == "B" then
-		local equipment = report.equipment or report.slots or {}
+		local equipment = Addon:GetGearCheckEquipment(report)
 		for index = 1, #equipment do
 			local slot = equipment[index]
 			if slot.policy == "CHECKED" and slot.item and not SlotHasCategoryIssue(findings, slot.key, categoryMap) then

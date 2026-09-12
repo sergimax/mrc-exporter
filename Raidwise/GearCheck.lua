@@ -44,10 +44,8 @@ local function SetInspectComplete(report, complete)
 	if not report then
 		return
 	end
-	local inspect = report.inspect
-	if not inspect and report.collection then
-		inspect = report.collection.inspect
-	end
+	Addon:NormalizeGearCheckReport(report)
+	local inspect = report.collection.inspect
 	if inspect then
 		inspect.complete = complete and true or false
 	end
@@ -67,7 +65,7 @@ local function ReportGradesNeedRefresh(report)
 	if not report then
 		return false
 	end
-	local inspect = (report.collection and report.collection.inspect) or report.inspect or {}
+	local inspect = Addon:GetGearCheckInspect(report)
 	if not inspect.complete then
 		return false
 	end
@@ -126,6 +124,7 @@ function Addon:SetLastGearCheckReport(report, status)
 			report.collection.scanStatus = status
 		end
 	end
+	self:NormalizeGearCheckReport(report)
 	self:EnsureGearCheckGrades(report)
 	lastReport = report
 end

@@ -47,7 +47,7 @@ local function ChatSlotShort(report, slotKey, compact)
 	if compact then
 		return SLOT_SHORT[slotKey] or tostring(slotKey)
 	end
-	local equipment = report.equipment or report.slots or {}
+	local equipment = Addon:GetGearCheckEquipment(report)
 	for index = 1, #equipment do
 		local slot = equipment[index]
 		if slot.key == slotKey then
@@ -61,7 +61,7 @@ local function ChatSlotItem(report, slotKey)
 	if not slotKey then
 		return nil
 	end
-	local equipment = report.equipment or report.slots or {}
+	local equipment = Addon:GetGearCheckEquipment(report)
 	for index = 1, #equipment do
 		local slot = equipment[index]
 		if slot.key == slotKey then
@@ -224,7 +224,7 @@ local function ChatDetailLines(report, mode, shortForm)
 	local lines = {}
 
 	if mode == "ok" then
-		local equipment = report.equipment or report.slots or {}
+		local equipment = Addon:GetGearCheckEquipment(report)
 		if shortForm then
 			local parts = {}
 			for index = 1, #equipment do
@@ -336,7 +336,11 @@ function Addon:FormatGearCheckChatReport(report, mode)
 	local shortForm = IsShortReportForm()
 	local name = ChatPlayerName(report)
 	local overall = report.overall or {}
-	local status = overall.status or "B"
+	local status = Addon:GetGearCheckScanLabel(report) or overall.status or "B"
+	local scanLabel = Addon:GetGearCheckScanLabel(report)
+	if scanLabel and mode ~= "summary" then
+		lines[#lines + 1] = name .. ": " .. scanLabel
+	end
 	local issues = overall.issues or {}
 	local verdicts = report.verdicts or {}
 
@@ -426,6 +430,7 @@ function Addon:FormatGearCheckChatReport(report, mode)
 
 	local details = ChatDetailLines(report, mode, shortForm)
 	if #details == 0 then
+		if scanLabel then return lines end
 		if shortForm then
 			lines[#lines + 1] = string.format("%s — %s: none", name, title)
 		elseif mode == "ok" then

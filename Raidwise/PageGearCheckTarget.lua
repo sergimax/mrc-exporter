@@ -145,7 +145,7 @@ local function SlotLabel(report, slotKey)
 	if not slotKey then
 		return W.T("GEAR_CHECK_SCOPE_GEAR")
 	end
-	local equipment = report.equipment or report.slots or {}
+	local equipment = Addon:GetGearCheckEquipment(report)
 	for index = 1, #equipment do
 		local slot = equipment[index]
 		if slot.key == slotKey then
@@ -166,7 +166,7 @@ local function SlotVerdict(report, slotKey)
 	if not slotKey then
 		return nil
 	end
-	local equipment = report.equipment or report.slots or {}
+	local equipment = Addon:GetGearCheckEquipment(report)
 	for index = 1, #equipment do
 		local slot = equipment[index]
 		if slot.key == slotKey then
@@ -200,7 +200,7 @@ local function BuildBreakdownGroups(report, filterId)
 	end
 
 	local function AppendOkSlots()
-		local equipment = report.equipment or report.slots or {}
+		local equipment = Addon:GetGearCheckEquipment(report)
 		for index = 1, #equipment do
 			local slot = equipment[index]
 			if slot.policy == "CHECKED" and slot.item and slot.verdict == "B" then
@@ -569,7 +569,7 @@ local function ApplySummary(page, report)
 
 	local overall = report.overall or {}
 	local status = overall.status or "B"
-	page.overallLabel:SetText(W.T("GEAR_CHECK_OVERALL", W.WrapGearGradation(status)))
+	page.overallLabel:SetText(W.T("GEAR_CHECK_OVERALL", (Addon:GetGearCheckScanLabel(report) or W.WrapGearGradation(status))))
 	W.SetFontColor(page.overallLabel, UI.TEXT_IDLE)
 
 	local character = report.character or {}
@@ -1408,6 +1408,7 @@ Addon.Pages.GearCheckTarget = {
 	capabilities = { reportChat = true, reportForm = true },
 	id = "geartarget",
 	LAYOUT_VERSION = LAYOUT_VERSION,
+	Refresh = function() Addon:RefreshGearCheckTargetView(false) end,
 	Create = CreateGearCheckTargetPage,
 	ApplyLocale = ApplyLocale,
 }

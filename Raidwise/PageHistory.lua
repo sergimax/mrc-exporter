@@ -350,8 +350,30 @@ function Addon:RefreshHistoryView()
 	W.LayoutTableScrollBars(page)
 end
 
+local function ApplyLocale(page)
+	if page then
+		if page.hint then
+			page.hint:SetText(W.T("HISTORY_HINT"))
+		end
+		if page.refreshBtn then
+			page.refreshBtn.label:SetText(W.T("BTN_REFRESH"))
+		end
+		for index, key in ipairs(page.headerKeys or {}) do
+			if page.headerLabels[index] then page.headerLabels[index]:SetText(W.T(key)) end
+		end
+	end
+end
+
 Addon.Pages.History = {
 	id = "history",
 	LAYOUT_VERSION = LAYOUT_VERSION,
+	Refresh = function(_, entering)
+		if entering and Addon.RecordCurrentGroupHistory then
+			Addon:RecordCurrentGroupHistory(false)
+		else
+			Addon:RefreshHistoryView()
+		end
+	end,
+	ApplyLocale = ApplyLocale,
 	Create = CreateHistoryPage,
 }

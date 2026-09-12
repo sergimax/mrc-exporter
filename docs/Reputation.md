@@ -4,6 +4,8 @@ Local player reputation for other characters is stored under `RaidwiseDB.history
 
 ## Entities
 
+`InitializeHistoryStore()` normalizes and migrates saved entries at addon initialization, before the UI is created. Explicit write methods also normalize their entries. `GetPersonalRating`, `GetCommunityRating`, `GetHistoryEvents`, `GetHistoryEntry`, and `BuildHistoryRoster` do not migrate or initialize storage. Integrations replacing the history store should explicitly initialize it before displaying legacy data.
+
 | Entity | Meaning | Stored as |
 |--------|---------|-----------|
 | **Opinion** | Overall personal note (positive / neutral / negative) | `rating.personal.opinion` |

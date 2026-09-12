@@ -500,4 +500,5 @@ Addon.Pages.Settings = {
 	UpdateLocaleButtons = UpdateLocaleButtons,
 	UpdateStartupRadios = UpdateStartupRadios,
 	ApplyLocale = ApplySettingsLocale,
+	Refresh = ApplySettingsLocale,
 }

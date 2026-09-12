@@ -26,12 +26,14 @@ UITheme.lua
 UIWidgets.lua
 RosterWidgets.lua
 UnitTooltips.lua
+ProfilePanels.lua
 CharacterProfile.lua
 GearCheckCatalog.lua
 GearCheckSets.lua
 GearCheckTrinkets.lua
 GearCheckProfiles.lua
 GearCheckBis.lua
+GearCheckReport.lua
 GearCheckRules.lua
 GearCheckGrades.lua
 GearCheckExplanations.lua

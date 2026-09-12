@@ -318,24 +318,10 @@ function Addon:SelectTab(tabId)
 	end
 	UpdateShellHeader(frame, tabId)
 
-	if tabId == "cooldowns" then
-		self.pendingLockoutTable = true
-		self:SaveCurrentCharacterLockouts()
-		RequestRaidInfo()
-		self:RefreshCooldownTable()
-	elseif tabId == "raid" or tabId == "composition" then
-		self:RefreshPartyData(true)
-	elseif tabId == "history" then
-		if self.RecordCurrentGroupHistory then
-			self:RecordCurrentGroupHistory(false)
-		elseif self.RefreshHistoryView then
-			self:RefreshHistoryView()
-		end
-	elseif tabId == "geartarget" then
-		if self.RefreshGearCheckTargetView then
-			self:RefreshGearCheckTargetView(false)
-		end
-	end
+	local pageInfo = PageInfoById(tabId)
+	local module = pageInfo and Addon.Pages[pageInfo.key]
+	if module and module.Refresh then module.Refresh(frame.pages[tabId], true) end
+
 end
 
 local function CreateTitleBar(frame)
@@ -474,18 +460,6 @@ local function CreateMenuButton(parent, tabId, label, yOffset, iconPath)
 	return button
 end
 
-local function ApplyPageHeaders(page)
-	if not page or not page.headerLabels or not page.headerKeys then
-		return
-	end
-	for index = 1, #page.headerKeys do
-		local label = page.headerLabels[index]
-		if label then
-			label:SetText(W.T(page.headerKeys[index]))
-		end
-	end
-end
-
 -- REFACTOR candidate: shell rebuild — menu, status bar, all pages, layout-version checks.
 function Addon:CreateMainFrame()
 	if self.mainFrame and not ShellNeedsRebuild(self.mainFrame) then
@@ -596,7 +570,7 @@ function Addon:CreateMainFrame()
 	return frame
 end
 
--- REFACTOR candidate: repetitive per-page string refresh; easy to miss a tab when adding pages.
+-- Pages own their controls; the shell dispatches lifecycle methods.
 function Addon:RefreshLocalizedUI()
 	local frame = self.mainFrame
 	if not frame then
@@ -623,135 +597,13 @@ function Addon:RefreshLocalizedUI()
 	end
 	UpdateShellHeader(frame, frame.selectedTab)
 
-	local exportPage = frame.pages.export
-	if exportPage then
-		if exportPage.desc then
-			exportPage.desc:SetText(W.T("EXPORT_DESC"))
+	for _, pageInfo in ipairs(PAGES) do
+		local page = frame.pages[pageInfo.id]
+		local module = Addon.Pages[pageInfo.key]
+		if page and module then
+			if module.ApplyLocale then module.ApplyLocale(page) end
+			if module.Refresh and module.Refresh ~= module.ApplyLocale then module.Refresh(page) end
 		end
-		if exportPage.namesLabel then
-			exportPage.namesLabel:SetText(W.T("EXPORT_INCLUDE_NAMES"))
-		end
-		if exportPage.exportBtn then
-			exportPage.exportBtn.label:SetText(W.T("BTN_EXPORT_DATA"))
-		end
-		if exportPage.selectBtn then
-			exportPage.selectBtn.label:SetText(W.T("BTN_SELECT_ALL"))
-		end
-		if exportPage.statusLabel then
-			local exported = frame.exportBox and (frame.exportBox:GetText() or "") ~= ""
-			exportPage.statusLabel:SetText(exported and W.T("EXPORT_READY") or W.T("EXPORT_HINT"))
-		end
-	end
-
-	local settingsPage = frame.pages.settings
-	if settingsPage then
-		local settingsModule = Addon.Pages and Addon.Pages.Settings
-		if settingsModule and settingsModule.ApplyLocale then
-			settingsModule.ApplyLocale(settingsPage)
-		else
-			if settingsPage.heading then
-				settingsPage.heading:SetText(W.T("SETTINGS_LANGUAGE"))
-			end
-			if settingsPage.hint then
-				settingsPage.hint:SetText(W.T("SETTINGS_LANGUAGE_HINT"))
-			end
-			if settingsPage.enBtn then
-				settingsPage.enBtn.label:SetText(W.T("LOCALE_EN"))
-			end
-			if settingsPage.ruBtn then
-				settingsPage.ruBtn.label:SetText(W.T("LOCALE_RU"))
-			end
-			if settingsModule and settingsModule.UpdateLocaleButtons then
-				settingsModule.UpdateLocaleButtons(settingsPage)
-			end
-		end
-	end
-
-	local infoPage = frame.pages.info
-	if infoPage then
-		local infoModule = Addon.Pages and Addon.Pages.Info
-		if infoModule and infoModule.Refresh then
-			infoModule.Refresh(infoPage)
-		end
-	end
-
-	local cooldownsPage = frame.pages.cooldowns
-	if cooldownsPage then
-		if cooldownsPage.hint then
-			cooldownsPage.hint:SetText(W.T("CD_HINT"))
-		end
-		if cooldownsPage.refreshBtn then
-			cooldownsPage.refreshBtn.label:SetText(W.T("BTN_REFRESH"))
-		end
-		if cooldownsPage.emptyLabel then
-			cooldownsPage.emptyLabel:SetText(W.T("CD_EMPTY"))
-		end
-		if cooldownsPage.instanceHeader then
-			cooldownsPage.instanceHeader:SetText(W.T("CD_INSTANCE"))
-		end
-		if cooldownsPage.noRowsLabel then
-			cooldownsPage.noRowsLabel:SetText(W.T("CD_NO_ROWS"))
-		end
-	end
-
-	local raidPage = frame.pages.raid
-	if raidPage then
-		local raidModule = Addon.Pages and Addon.Pages.Raid
-		if raidModule and raidModule.ApplyLocale then
-			raidModule.ApplyLocale(raidPage)
-		else
-			if raidPage.hint then
-				raidPage.hint:SetText(W.T("RAID_HINT"))
-			end
-			if raidPage.refreshBtn then
-				raidPage.refreshBtn.label:SetText(W.T("BTN_REFRESH"))
-			end
-		end
-	end
-
-	local compositionPage = frame.pages.composition
-	if compositionPage then
-		if compositionPage.hint then
-			compositionPage.hint:SetText(W.T("COMP_HINT"))
-		end
-		if compositionPage.refreshBtn then
-			compositionPage.refreshBtn.label:SetText(W.T("BTN_REFRESH"))
-		end
-		if compositionPage.reportBtn then
-			compositionPage.reportBtn.label:SetText(W.T("BTN_COMP_REPORT"))
-		end
-	end
-
-	local gearTargetPage = frame.pages.geartarget
-	if gearTargetPage then
-		local gearTargetModule = Addon.Pages and Addon.Pages.GearCheckTarget
-		if gearTargetModule and gearTargetModule.ApplyLocale then
-			gearTargetModule.ApplyLocale(gearTargetPage)
-		end
-	end
-
-	local historyPage = frame.pages.history
-	if historyPage then
-		if historyPage.hint then
-			historyPage.hint:SetText(W.T("HISTORY_HINT"))
-		end
-		if historyPage.refreshBtn then
-			historyPage.refreshBtn.label:SetText(W.T("BTN_REFRESH"))
-		end
-		ApplyPageHeaders(historyPage)
-	end
-
-	if self.RefreshCooldownTable then
-		self:RefreshCooldownTable()
-	end
-	if self.RefreshRaidRosterView then
-		self:RefreshRaidRosterView(false)
-	end
-	if self.RefreshCompositionView then
-		self:RefreshCompositionView(false)
-	end
-	if self.RefreshHistoryView then
-		self:RefreshHistoryView()
 	end
 
 	if self.raidDetailFrame and self.raidDetailFrame:IsShown() and self.raidDetailFrame.profileMember then

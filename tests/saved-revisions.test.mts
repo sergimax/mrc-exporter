@@ -8,7 +8,7 @@ test("saved report revisions are independent of release version and preserve leg
   try {
     assert.equal(lua.doStringSync("return _VERSION"), "Lua 5.1");
     lua.doStringSync("Raidwise={db={},version='1.21.0'}; function time() return 100 end");
-    for (const module of ["GearCheckCatalog", "GearCheckRules", "GearCheckSavedReports"]) {
+    for (const module of ["GearCheckCatalog", "GearCheckReport", "GearCheckRules", "GearCheckSavedReports"]) {
       lua.doStringSync(await readFile(new URL(`../Raidwise/${module}.lua`, import.meta.url), "utf8"));
     }
     lua.doStringSync(`

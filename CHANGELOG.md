@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- Incomplete and unavailable gear scans are identified consistently in target/raid views, chat and dumps, and excluded from raid/minimap readiness counts. Partial diagnostic grades remain available.
+
 ### Added
 - Settings includes a copyable link to the repository changelog in English and Russian.
 

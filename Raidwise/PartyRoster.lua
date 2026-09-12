@@ -378,8 +378,8 @@ local function MinimalPartyMember(unit)
 	return member
 end
 
--- REFACTOR candidate: ~80% duplicated with CollectRaidMember; extract shared member snapshot builder.
-function Addon:CollectPartyMember(unit, refreshGearScore)
+local function CollectMember(unit, refreshGearScore)
+	local self = Addon
 	local name, realm = UnitName(unit)
 	local localizedClass, classToken = UnitClass(unit)
 	local guildName, guildRankName = GuildInfoForUnit(unit)
@@ -411,9 +411,12 @@ function Addon:CollectPartyMember(unit, refreshGearScore)
 		guildName = guildName,
 		guildRank = guildRankName,
 	}
-	if self.MergeRatingIntoMember then
-		self:MergeRatingIntoMember(member)
-	end
+	return member
+end
+
+function Addon:CollectPartyMember(unit, refreshGearScore)
+	local member = CollectMember(unit, refreshGearScore)
+	if self.MergeRatingIntoMember then self:MergeRatingIntoMember(member) end
 	return member
 end
 
@@ -493,52 +496,15 @@ local function AppendRaidMember(groups, groupIndex, member)
 	slots[#slots + 1] = member
 end
 
--- REFACTOR candidate: ~80% duplicated with CollectPartyMember; extract shared member snapshot builder.
 function Addon:CollectRaidMember(unit, refreshGearScore, raidIndex)
-	local name, realm = UnitName(unit)
-	local localizedClass, classToken = UnitClass(unit)
-	local specName, specIcon, specTab = SpecForUnit(unit)
-	local guildName, guildRankName = GuildInfoForUnit(unit)
-	local _, raceToken = UnitRace(unit)
-	local faction = UnitFactionGroup and UnitFactionGroup(unit) or ""
-	local gender = UnitSex and UnitSex(unit) or nil
+	local member = CollectMember(unit, refreshGearScore)
 	local isMainTank = false
 	if raidIndex and type(GetRaidRosterInfo) == "function" then
 		local _, _, _, _, _, _, _, _, _, raidRole = GetRaidRosterInfo(raidIndex)
 		isMainTank = raidRole == "MAINTANK"
 	end
-	local role = "unknown"
-	if self.RoleForRaidMember then
-		role = self:RoleForRaidMember(classToken, specTab, isMainTank)
-	end
-	local raidBuffs = {}
-	if self.RaidBuffsForMember then
-		raidBuffs = self:RaidBuffsForMember(classToken, specTab, raceToken, faction)
-	end
-
-	local member = {
-		unit = unit,
-		guid = UnitGUID(unit) or "",
-		name = name or "?",
-		realm = realm or "",
-		class = classToken or "",
-		classLabel = localizedClass or "",
-		spec = specName,
-		specIcon = specIcon or "",
-		specTab = specTab or 0,
-		race = raceToken or "",
-		faction = faction,
-		gender = gender,
-		role = role,
-		raidBuffs = raidBuffs,
-		gearScore = GearScoreForUnit(unit, refreshGearScore),
-		averageIlvl = AverageItemLevelForUnit(unit),
-		guildName = guildName,
-		guildRank = guildRankName,
-	}
-	if self.MergeRatingIntoMember then
-		self:MergeRatingIntoMember(member)
-	end
+	member.role = self.RoleForRaidMember and self:RoleForRaidMember(member.class, member.specTab, isMainTank) or "unknown"
+	if self.MergeRatingIntoMember then self:MergeRatingIntoMember(member) end
 	return member
 end
 

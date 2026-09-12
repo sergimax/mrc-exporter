@@ -5,7 +5,7 @@ import { Lua } from "wasmoon-lua5.1";
 
 const modules = [
   "InspectCoordinator", "GearCheckCatalog", "GearCheckSets", "GearCheckTrinkets",
-  "GearCheckProfiles", "GearCheckBis", "GearCheckRules", "GearCheckGrades", "GearCheckExplanations", "GearCheckSelfTest", "GearCheckCollector", "GearCheck", "ChatReports", "GearCheckReports", "GearCheckDump",
+  "GearCheckProfiles", "GearCheckBis", "GearCheckReport", "GearCheckRules", "GearCheckGrades", "GearCheckExplanations", "GearCheckSelfTest", "GearCheckCollector", "GearCheck", "ChatReports", "GearCheckReports", "GearCheckDump",
 ];
 
 test("final report messages preserve UTF-8, links, and preview/send equality", async () => {
@@ -76,6 +76,15 @@ test("unavailable equipment cannot claim a clean scan", async () => {
       Raidwise:EvaluateGearCheck(report)
       assert(report.overall.reason == "inspect_incomplete")
       assert(report.overall.summary == "Inspect data is incomplete; grades are provisional.")
+      assert(report.overall.scanState == "incomplete" and report.overall.provisional)
+      report.collection.counts.filledCheckedSlots = 0
+      Raidwise:EvaluateGearCheck(report)
+      assert(report.overall.scanState == "unavailable" and report.overall.provisional)
+      for _, mode in ipairs({"summary", "items", "enchants", "gems", "ok"}) do
+        local text = table.concat(Raidwise:FormatGearCheckChatReport(report, mode), "\\n")
+        assert(text:find("GEAR_CHECK_SCAN_UNAVAILABLE", 1, true), mode)
+        assert(not text:find("No issues", 1, true), mode)
+      end
     `);
   });
 });

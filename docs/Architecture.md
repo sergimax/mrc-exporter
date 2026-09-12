@@ -14,6 +14,7 @@ Paths below are relative to `Raidwise/`. Search the entry point before reading i
 | Gear/bags/currency export, lockouts | `CharacterExport.lua`, `CharacterLockouts.lua` | `FormatEquippedGearExport`, `CollectCharacterCurrency`, `BuildCooldownTable` |
 | Inspect timing, identity, retries | `InspectCoordinator.lua`, `GearCheck.lua`, `PartyRoster.lua` | `StartInspectRequest`, `RetryInspectRequest`, `StartGearCheckUnitScan`, `CancelGearCheckScan` |
 | Item links, sockets and gems | `GearCheckCollector.lua` | `CollectGearCheckObservation`; private `ParseItemLinkParts`, `NormalizeItem` |
+| Report compatibility and completeness | `GearCheckReport.lua` | `NormalizeGearCheckReport`, `GetGearCheckScanState`; canonical nested fields win over legacy aliases |
 | Findings, grades, explanations | `GearCheckRules.lua`, `GearCheckGrades.lua`, `GearCheckExplanations.lua` | `EvaluateGearCheck`, `AggregateGearCheckOverall`; internal `GearCheckPolicy` |
 | Saved reports and dumps | `GearCheckSavedReports.lua`, `GearCheckDump.lua` | `SaveGearCheckReport`, `FormatGearCheckDump`; dump module owns asynchronous raid export jobs |
 | Rosters and shared refresh | `PartyRoster.lua`, `RosterRefresh.lua` | `BuildRaidGroups`, `BuildRosterSnapshot`, `ScheduleRosterRefresh` |
@@ -21,7 +22,7 @@ Paths below are relative to `Raidwise/`. Search the entry point before reading i
 | Rating catalogs/access | `PlayerHistory.lua` | `GetPersonalRating`, `GetCommunityRating`, normalization |
 | History, migrations, persistence | `PlayerHistoryStore.lua` | `RecordCurrentGroupHistory`, `SavePersonalRatingForGuid`, `SaveHistoryEventsForGuid`, `SaveProfileNotesForGuid` |
 | Unsaved profile edits | `ProfileDraft.lua` | `CreateProfileDraft`, `ToggleProfileDraftTag`, `AddProfileDraftEvent` |
-| Profile window | `CharacterProfile.lua` | `ShowRaidCharacterWindow`, `SelectProfileTab`, `CommitProfileRating`; named tab builders |
+| Profile window | `CharacterProfile.lua`, `ProfilePanels.lua` | Window, editing and commands in `CharacterProfile`; tab construction and history rendering in `ProfilePanels` |
 | Rating display and unit tooltips | `RatingPresentation.lua`, `UnitTooltips.lua` | `GetTooltipSettings`, `BuildUnitTooltipRatingLinesForMember`; tooltip hooks in `UnitTooltips` |
 | Theme / shared controls | `UITheme.lua`, `UIWidgets.lua`, `RosterWidgets.lua` | Stable theme tables; generic controls; roster/grade/rating controls |
 | Raid and target gear views | `PageRaid.lua`, `PageGearCheckTarget.lua` | `RefreshRaidRosterView`, `RefreshGearCheckTargetView`, `ShowGearCheckReport` |
@@ -34,21 +35,25 @@ Paths below are relative to `Raidwise/`. Search the entry point before reading i
 
 - Bootstrap creates the namespace; later modules attach methods before normal event-driven use.
 - `InspectCoordinator` precedes roster consumers and owns inspect API calls/events. Roster and gear retain their queues and result handling.
-- History catalogs, store, presentation, and drafts precede the profile window.
+- History catalogs, store, presentation, drafts and profile panels precede the profile window.
 - `UITheme` precedes `UIWidgets`, then `RosterWidgets`, then views. Theme/color tables retain identity across theme changes.
-- Gear catalogs precede rules, grades, explanations and self-tests. Saved reports and collector precede `GearCheck`; reports and dumps follow it. Pages load before the shell.
+- Gear catalogs and report compatibility helpers precede rules, grades, explanations and self-tests. Saved reports and collector precede `GearCheck`; reports and dumps follow it. Pages load before the shell.
 
 ### Gear flow
 
 `StartGearCheckUnitScan` requests inspect through the coordinator. `CollectGearCheck` supplies readiness to `CollectGearCheckObservation(unit, inspectReady)` and retains the observation. Collection does not evaluate. Finalization calls `EvaluateGearCheck`, which produces findings and invokes grade aggregation. Formatting belongs in reports, dumps and explanations.
 
-Schema 3 retains compatibility aliases (`equipment`/`slots`, nested/top-level inspect and counts). Rule and catalog revisions are independent of addon semver; saved reports retain original metadata. See [Gear-Check-Progress.md](Gear-Check-Progress.md) for compatibility and grading details.
+Schema 3 retains compatibility aliases (`equipment`/`slots`, nested/top-level inspect and counts). `NormalizeGearCheckReport` is the adapter at collection, evaluation and snapshot creation boundaries; canonical fields are `character`, `equipment`, and `collection`. Equipment/inspect accessors centralize reads of legacy reports. Rule and catalog revisions are independent of addon semver; saved reports retain original metadata. See [Gear-Check-Progress.md](Gear-Check-Progress.md) for compatibility and grading details.
+
+`GetGearCheckScanState` derives `complete`, `incomplete`, or `unavailable` independently of S/A/B/C/D grades. Overall results carry optional `scanState`, `scanReason`, and `provisional` metadata. Views and chat show incomplete/unavailable labels; raid/minimap readiness counts exclude those reports. Diagnostic grades remain available for partial observations.
 
 ### Refresh and reputation flow
 
 `ScheduleRosterRefresh` merges same-frame requests. Each pass builds one snapshot shared by history and the visible raid/composition page. Hidden views are not redrawn; history still records. Snapshots are not cached across passes. Inspect queue advancement is immediate; consumable icons have their own targeted refresh path.
 
-Profile commands persist drafts through the store and refresh rating views. Notes have separate Save/Reset behavior. Some rating accessors normalize/migrate storage; reads are not universally pure. Community ratings include mock fallback data; opinion exchange is not implemented.
+Profile commands persist drafts through the store and refresh rating views. Notes have separate Save/Reset behavior. `InitializeHistoryStore` migrates entries at addon initialization, before UI construction; explicit write methods also normalize entries. Rating/history getters do not initialize or migrate SavedVariables. Community ratings include mock fallback data; opinion exchange is not implemented.
+
+Pages register `Create`, `Refresh(page, entering)`, and `ApplyLocale(page)`. The shell dispatches these methods; page modules own control labels and entry-specific collection. `entering=true` requests the original tab-entry work (lockout requests, roster refresh or history recording); locale refresh omits it. Public refresh wrappers remain compatible. Profile extraction preserves anchors, dimensions and named-frame versions.
 
 ### SavedVariables and versions
 

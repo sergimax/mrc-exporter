@@ -255,6 +255,7 @@ end
 -- Run once when this addon finishes loading.
 function Addon:OnInitialize()
 	EnsureDB()
+	if self.InitializeHistoryStore then self:InitializeHistoryStore() end
 	if self.CreateMinimapButton then
 		self:CreateMinimapButton()
 	end

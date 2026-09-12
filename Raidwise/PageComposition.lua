@@ -695,9 +695,27 @@ function Addon:RefreshCompositionView(refreshGearScore, snapshot)
 	page.layouting = nil
 end
 
+local function ApplyLocale(page)
+	if page then
+		if page.hint then
+			page.hint:SetText(W.T("COMP_HINT"))
+		end
+		if page.refreshBtn then
+			page.refreshBtn.label:SetText(W.T("BTN_REFRESH"))
+		end
+		if page.reportBtn then
+			page.reportBtn.label:SetText(W.T("BTN_COMP_REPORT"))
+		end
+	end
+end
+
 Addon.Pages.Composition = {
 	capabilities = { reportChat = true },
 	id = "composition",
 	LAYOUT_VERSION = LAYOUT_VERSION,
+	Refresh = function(_, entering)
+		if entering then Addon:RefreshPartyData(true) else Addon:RefreshCompositionView(false) end
+	end,
+	ApplyLocale = ApplyLocale,
 	Create = CreateCompositionPage,
 }

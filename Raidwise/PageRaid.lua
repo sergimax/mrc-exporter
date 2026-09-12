@@ -86,13 +86,14 @@ local function GearStatusLabelForEntry(entry)
 		return W.T("RAID_CELL_NOT_SCANNED")
 	end
 	local overall = entry.report.overall or {}
-	return overall.status or "B"
+	return Addon:GetGearCheckScanLabel(entry.report) or overall.status or "B"
 end
 
 local function GradeFromEntry(entry, field)
 	if not entry or not entry.report then
 		return nil
 	end
+	if Addon:GetGearCheckScanState(entry.report) ~= "complete" then return nil end
 	local overall = entry.report.overall or {}
 	if field == "enchant" then
 		return overall.enchantSocketGrade or "B"
@@ -1330,7 +1331,7 @@ local function FillGearReportRows(cell, member, entry)
 	local overall = report.overall or {}
 	local gearGrade = overall.gearGrade or overall.status or "B"
 	local enchantSocketGrade = overall.enchantSocketGrade or "B"
-	cell.gradesText:SetText(FormatCompactGradesLine(gearGrade, enchantSocketGrade))
+	cell.gradesText:SetText(Addon:GetGearCheckScanLabel(report) or FormatCompactGradesLine(gearGrade, enchantSocketGrade))
 	W.SetFontColor(cell.gradesText, UI.TEXT_IDLE)
 
 	if cell.gearBtn then
@@ -1913,6 +1914,9 @@ Addon.Pages.Raid = {
 	capabilities = { reportChat = true },
 	id = "raid",
 	LAYOUT_VERSION = LAYOUT_VERSION,
+	Refresh = function(_, entering)
+		if entering then Addon:RefreshPartyData(true) else Addon:RefreshRaidRosterView(false) end
+	end,
 	Create = CreateRaidRosterPage,
 	ApplyLocale = ApplyLocale,
 }

@@ -377,6 +377,9 @@ function W.AppendGearCheckRaidTooltip(gearEntry)
 		{ key = "enchantSocket", labelKey = "GEAR_CHECK_RAID_TIP_ENCHANT" },
 	}
 
+	local scanLabel = Addon:GetGearCheckScanLabel(report)
+	if scanLabel then GameTooltip:AddLine(scanLabel, 1, 0.82, 0, true) end
+
 	for sectionIndex = 1, #sections do
 		local section = sections[sectionIndex]
 		local block = Addon:BuildGearCheckCategoryTooltipLines(report, section.key, TOOLTIP_DETAIL_MAX)
