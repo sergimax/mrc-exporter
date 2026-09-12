@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Settings includes a copyable link to the repository changelog in English and Russian.
+
 ### Fixed
 - Remote gear scans with apparently empty sockets on every socketed item require a second inspect response before reporting missing gems. Unconfirmed reads remain incomplete.
 - Incomplete gear reports explicitly describe their grades as provisional instead of claiming no significant issues.

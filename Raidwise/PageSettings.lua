@@ -6,7 +6,8 @@ local UI = Addon.UITheme
 
 Addon.Pages = Addon.Pages or {}
 
-local LAYOUT_VERSION = 13
+local LAYOUT_VERSION = 14
+local CHANGELOG_URL = "https://github.com/sergimax/Raidwise-addon/blob/main/CHANGELOG.md"
 
 local SECTION_HEADER_H = 28
 local SECTION_GAP = 20
@@ -395,6 +396,29 @@ local function CreateSettingsPage(parent)
 	previewStacked:SetNonSpaceWrap(true)
 	page.previewStacked = previewStacked
 
+	page.changelogHeading = CreateSettingsHeading(page, "SETTINGS_CHANGELOG", tooltipBody)
+	local changelogHint = W.CreateFontString(page, nil, "OVERLAY", "GameFontHighlight")
+	changelogHint:SetPoint("TOPLEFT", page.changelogHeading, "BOTTOMLEFT", 0, -UI.INFO_HEADING_GAP)
+	changelogHint:SetText(W.T("INFO_REPO_HINT"))
+	page.changelogHint = changelogHint
+	local changelogBox, changelogHost = W.CreateLineCopyBox(page, "RaidwiseChangelogBoxV" .. tostring(LAYOUT_VERSION))
+	changelogBox:SetText(CHANGELOG_URL)
+	local changelogButton = W.CreatePlainButton(page, 130, UI.ACTION_BTN_H, W.T("BTN_SELECT_ALL"))
+	changelogButton:SetPoint("RIGHT", page, "RIGHT", -SECTION_INSET, 0)
+	changelogButton:SetPoint("TOP", changelogHost, "TOP", 0, 0)
+	changelogHost:SetPoint("TOPLEFT", changelogHint, "BOTTOMLEFT", 0, -UI.CHECK_TO_BUTTONS)
+	changelogHost:SetPoint("RIGHT", changelogButton, "LEFT", -UI.ACTION_BTN_GAP, 0)
+	changelogButton:SetScript("OnClick", function()
+		changelogBox:SetText(CHANGELOG_URL)
+		changelogBox:SetFocus()
+		changelogBox:HighlightText()
+	end)
+	changelogBox:SetScript("OnEditFocusLost", function(edit)
+		edit:SetText(CHANGELOG_URL)
+		edit:HighlightText(0, 0)
+	end)
+	page.changelogButton = changelogButton
+
 	page.RefreshTooltipPreviews = RefreshTooltipPreviews
 	UpdateLocaleButtons(page)
 	RefreshTooltipPreviews(page)
@@ -405,6 +429,11 @@ end
 local function ApplySettingsLocale(page)
 	if not page then
 		return
+	end
+	if page.changelogHeading then
+		page.changelogHeading:SetText(W.T("SETTINGS_CHANGELOG"))
+		page.changelogHint:SetText(W.T("INFO_REPO_HINT"))
+		page.changelogButton.label:SetText(W.T("BTN_SELECT_ALL"))
 	end
 	if page.themeHeading then
 		page.themeHeading:SetText(W.T("SETTINGS_THEME"))

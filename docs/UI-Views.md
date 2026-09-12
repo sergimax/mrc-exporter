@@ -49,7 +49,7 @@ Independent from addon semver (`Addon.version` in the menu title bar). Bump a vi
 | Composition | `LAYOUT_VERSION = 9` | `PageComposition.lua` | Shell title bar (next to page name) |
 | Gear check (target) | `LAYOUT_VERSION = 12` | `PageGearCheckTarget.lua` | Shell title bar (next to page name) |
 | History | `LAYOUT_VERSION = 1` | `PageHistory.lua` | Shell title bar (next to page name) |
-| Settings | `LAYOUT_VERSION = 13` | `PageSettings.lua` | Shell title bar (next to page name) |
+| Settings | `LAYOUT_VERSION = 14` | `PageSettings.lua` | Shell title bar (next to page name) |
 | Info | `LAYOUT_VERSION = 4` | `PageInfo.lua` | Shell title bar (next to page name) |
 
 Rules: see `.cursor/rules/layout-versions.mdc`. Do **not** bump layout versions for locale-only string edits.
@@ -326,6 +326,8 @@ Players you have been in a party or raid with (not yourself). Each GUID is store
 Notes are stored on each history record (`notes`) and edited in Character profile; they are not shown in this table.
 
 ## Settings
+
+The Changelog section below Unit tooltips provides the repository's `CHANGELOG.md` URL and a localized Select all button. Select the address, then press Ctrl+C and paste it into a browser.
 
 A **Theme: Dark / Theme: Light** toggle in its own **Theme** category below Language applies immediately and persists in `RaidwiseDB.theme`. Dark is the default.
 

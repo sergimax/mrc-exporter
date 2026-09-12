@@ -225,7 +225,7 @@ test("header chat radios preserve choices, colors, and exclusive selection", asy
       frame.reportFormRadios[2].scripts.OnClick()
       assert(Raidwise.db.reportForm=="full")
       assert(frame.reportFormRadios[2].checked and not frame.reportFormRadios[1].checked)
-      assert(Raidwise.Pages.Settings.LAYOUT_VERSION==13)
+      assert(Raidwise.Pages.Settings.LAYOUT_VERSION==14)
       local updateHeader=findLocal(Raidwise.SelectTab,"UpdateShellHeader")
       for _,host in ipairs({frame.reportChannelHost,frame.reportFormHost}) do
         host.Show=function(self) self.visible=true end
