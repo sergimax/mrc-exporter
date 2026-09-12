@@ -2,6 +2,15 @@
 
 This file is the shared source of project rules for Codex and Cursor.
 
+## Focused repository work
+
+- Start with the task-routing table in [docs/Architecture.md](docs/Architecture.md); read only the relevant owner modules and contracts.
+- Search symbols with `rg -n` in named files or `Raidwise/` before reading whole files. Read bounded sections around matches; avoid dumping catalogs, locales, or reports for unrelated tasks.
+- Default code-search scope is `Raidwise/` and `tests/`. Generated/reference paths and commands for including them deliberately are listed in the architecture guide; do not hide them globally.
+- Use [tests/README.md](tests/README.md) to select checks. Reuse installed dependencies; install only when missing or changed. Run `npm run check` before completing code/test changes, and repeat only after changes or failures justify it.
+- Review `git diff --stat` and the relevant diff before expanding investigation. Keep documentation ownership current when moving code; link to existing rules instead of copying them.
+- Tests should assert behavior and compatibility contracts, not incidental current layout/release numbers. Keep exact API/schema values when they are the contract under test.
+
 ## Code style
 
 - Target Lua 5.1 and WoW 3.3.5a APIs only (`Interface: 30300`); do not use retail or Classic APIs.

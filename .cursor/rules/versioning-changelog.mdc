@@ -1,9 +1,0 @@
----
-description: Semantic versioning and Keep a Changelog rules
-alwaysApply: true
----
-
-# Versioning and changelog
-
-Read and follow the Versioning and changelog section in [AGENTS.md](../../AGENTS.md).
-The repository-root AGENTS.md is the shared source of project rules.

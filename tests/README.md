@@ -24,6 +24,28 @@ are not required.
 
 ## Test files
 
+For focused iteration, run `node --test tests/scan.test.mts` (substitute the
+relevant file below). Before finishing code/test changes, run `npm run check`
+after the final edit. Reuse installed dependencies unless missing or the lockfile
+changes; repeat successful checks only after new edits or unresolved concerns.
+
+| Changed behavior | Start with |
+|---|---|
+| Scan lifecycle, retries, cancellation | `scan.test.mts` |
+| Inspect ownership and roster handoff | `inspect.test.mts` |
+| Collection, grades, gems, meta, report chat/header | `gear-check.test.mts` |
+| Saved revision compatibility | `saved-revisions.test.mts` |
+| Roster snapshot sharing | `roster-refresh.test.mts` |
+| Ratings, migrations, profile drafts/saving | `history.test.mts` |
+| Theme bindings | `theme.test.mts` |
+| Dump jobs, cancellation, output routing | `dump.test.mts` |
+
+Assert behavior rather than incidental version numbers: header radio tests check
+exclusivity and page visibility, not the current Settings layout version. Keep
+exact values for real contracts, such as Lua 5.1, schema compatibility and
+protocol limits. Rebuild tests should compare frame stamps with registered
+layout versions; revision tests should compare metadata across changes.
+
 - `gear-check.test.mts`: TypeScript orchestration, runtime guard, and test cases.
 - `lua/wow-stubs.lua`: minimal offline WoW API substitutes.
 - `lua/gear-check-gems.lua`: gem ID, partial-read, cache, and meta regressions

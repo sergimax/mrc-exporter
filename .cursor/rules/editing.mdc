@@ -1,9 +1,0 @@
----
-description: How to edit files in this repo
-alwaysApply: true
----
-
-# Editing
-
-Read and follow the Editing section in [AGENTS.md](../../AGENTS.md).
-The repository-root AGENTS.md is the shared source of project rules.
