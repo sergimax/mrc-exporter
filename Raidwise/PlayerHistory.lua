@@ -298,7 +298,6 @@ function Addon:GetPersonalRating(entryOrMember)
 	if type(guid) == "string" and guid ~= "" and self.GetHistoryEntry then
 		local saved = self:GetHistoryEntry(guid)
 		if type(saved) == "table" then
-			self:EnsurePersonalRating(saved)
 			entryOrMember = saved
 		end
 	end

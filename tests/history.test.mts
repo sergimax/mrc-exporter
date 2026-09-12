@@ -19,7 +19,7 @@ test("history migration is idempotent and ratings, events, and notes persist", a
       Raidwise.UITheme = {}
       Raidwise.Widgets = { T=function(key) return key end }
     `);
-    for (const module of ["PlayerHistory", "PlayerHistoryStore", "RatingPresentation", "ProfileDraft", "CharacterProfile"]) {
+    for (const module of ["PlayerHistory", "PlayerHistoryStore", "RatingPresentation", "ProfileDraft", "ProfilePanels", "CharacterProfile"]) {
       lua.doStringSync(await readFile(new URL(`../Raidwise/${module}.lua`, import.meta.url), "utf8"));
     }
     lua.doStringSync(`

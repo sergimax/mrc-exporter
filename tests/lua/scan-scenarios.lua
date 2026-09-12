@@ -5,6 +5,8 @@ local completed = {}
 local resumed = 0
 local specKnown = true
 local uncertain = false
+local emptySockets = false
+local detectedGems = {}
 function Raidwise:EvaluateGearCheck(report) report.evaluated = true end
 function Raidwise:QueuePartyInspects() resumed = resumed + 1 end
 function Raidwise:CollectGearCheck(unit)
@@ -13,7 +15,10 @@ function Raidwise:CollectGearCheck(unit)
         character = { guid = UnitGUID(unit), isSelf = unit == "player", specKnown = specKnown },
         inspect = { canInspect = true, needed = unit ~= "player" },
         collection = { counts = { filledCheckedSlots = 1 } },
-        equipment = { { policy = "CHECKED", item = { sockets = { gemDataUncertain = uncertain } } } },
+        equipment = { { policy = "CHECKED", item = { gems = detectedGems, sockets = {
+            gemDataUncertain = uncertain, emptyConfirmed = emptySockets,
+            empty = emptySockets and 2 or 0, total = 2, states = {"empty", "empty"},
+        } } } },
     }
 end
 local function start(unit)
@@ -22,7 +27,34 @@ local function start(unit)
     end)
 end
 function RunScanScenario(scenario)
-    if scenario == "repeated" then
+    if scenario == "empty-confirmed" or scenario == "empty-delayed" or scenario == "empty-timeout" then
+        emptySockets = true
+        assert(start())
+        runtime:Ready()
+        assert(#completed == 0, "Accepted the first all-empty inspect")
+        runtime:Tick(4)
+        assert(#completed == 0 and #runtime.notifications == 2, "Missing confirmation request")
+        if scenario == "empty-timeout" then
+            runtime:Tick(2)
+            assert(#completed == 1 and completed[1].status == "timeout")
+            local sockets = completed[1].report.equipment[1].item.sockets
+            assert(sockets.gemDataUncertain and not sockets.emptyConfirmed and sockets.empty == 0)
+            assert(sockets.states[1] == "unresolved")
+            assert(not completed[1].report.inspect.complete)
+        else
+            if scenario == "empty-delayed" then
+                emptySockets = false
+                detectedGems = {{itemId=41398}, {itemId=40117}}
+            end
+            runtime:Ready()
+            assert(#completed == 1 and completed[1].status == "ok")
+            assert(completed[1].report.inspect.complete)
+            assert(completed[1].report.equipment[1].item.sockets.emptyConfirmed == emptySockets)
+            if scenario == "empty-delayed" then
+                assert(#completed[1].report.equipment[1].item.gems == 2)
+            end
+        end
+    elseif scenario == "repeated" then
         for index = 1, 2 do
             assert(start())
             assert(not start(), "Overlapping request accepted")

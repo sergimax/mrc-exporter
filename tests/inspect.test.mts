@@ -7,7 +7,7 @@ test("real roster queue releases timeouts, validates identity, and hands off to 
   const lua = await Lua.create();
   try {
     assert.equal(lua.doStringSync("return _VERSION"), "Lua 5.1");
-    for (const path of ["lua/wow-stubs.lua", "lua/scan-runtime.lua", "../Raidwise/InspectCoordinator.lua", "../Raidwise/PartyRoster.lua", "../Raidwise/RosterRefresh.lua", "../Raidwise/GearCheck.lua"]) {
+    for (const path of ["lua/wow-stubs.lua", "lua/scan-runtime.lua", "../Raidwise/InspectCoordinator.lua", "../Raidwise/PartyRoster.lua", "../Raidwise/RosterRefresh.lua", "../Raidwise/GearCheckReport.lua", "../Raidwise/GearCheck.lua"]) {
       lua.doStringSync(await readFile(new URL(path, import.meta.url), "utf8"));
     }
     lua.doStringSync(`

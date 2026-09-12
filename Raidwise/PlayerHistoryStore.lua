@@ -271,6 +271,13 @@ local function EnsureHistoryFields(entry)
 	return entry
 end
 
+-- Explicit load boundary; getters never migrate persisted entries.
+function Addon:InitializeHistoryStore()
+	for _, entry in pairs(self:HistoryStore()) do
+		if type(entry) == "table" then EnsureHistoryFields(entry) end
+	end
+end
+
 function Addon:AppendProfileHistoryChange(entry, kind, detail)
 	if type(entry) ~= "table" or not kind or kind == "" then
 		return
@@ -290,7 +297,8 @@ function Addon:GetHistoryEntry(guid)
 	if not guid or guid == "" then
 		return nil
 	end
-	return self:HistoryStore()[guid]
+	local store = self.db and self.db.history
+	return type(store) == "table" and store[guid] or nil
 end
 
 function Addon:EnsureHistoryEntryForGuid(guid, seed)
@@ -472,10 +480,10 @@ end
 
 function Addon:BuildHistoryRoster()
 	local roster = {}
-	local store = self:HistoryStore()
+	local store = self.db and self.db.history or {}
 	for _, entry in pairs(store) do
 		if type(entry) == "table" then
-			roster[#roster + 1] = EnsureHistoryFields(entry)
+			roster[#roster + 1] = entry
 		end
 	end
 

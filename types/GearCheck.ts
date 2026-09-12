@@ -260,6 +260,9 @@ export type GearCheckIssueCounts = {
 };
 
 export type GearCheckOverall = {
+  scanState?: "complete" | "incomplete" | "unavailable";
+  scanReason?: string;
+  provisional?: boolean;
   status: GearCheckItemVerdict;
   /** Armor, weapons, trinkets, stats — worst slot wins within this category. */
   gearGrade?: GearCheckItemVerdict;
@@ -307,7 +310,7 @@ export type GearCheckCharacter = {
   averageIlvl?: number;
 };
 
-/** Inspect / scan metadata. Not an input to suitability rules. */
+/** Inspect / scan metadata. Completeness gates confidence in grades. */
 export type GearCheckCollection = {
   collectedAt: number;
   scanStatus?: string;
@@ -327,7 +330,7 @@ export type GearCheckCollection = {
 
 /**
  * Frozen Gear Check report.
- * Rules read `character` + `equipment` (+ top-level `gaps`). Ignore `collection`.
+ * Rules read `character` + `equipment` (+ top-level `gaps`); collection gates completeness.
  * After Phase 3 evaluate: `findings` + `profile`.
  * After Phase 4 aggregate: per-slot `verdict` + `verdicts` counts (S / A / B / C / D).
  * After Phase 5: `overall`, `meta` activation, informational `sets`.

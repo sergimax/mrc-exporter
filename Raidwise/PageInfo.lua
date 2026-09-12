@@ -297,4 +297,5 @@ Addon.Pages.Info = {
 	LAYOUT_VERSION = LAYOUT_VERSION,
 	Create = CreateInfoPage,
 	Refresh = RefreshInfoPage,
+	ApplyLocale = RefreshInfoPage,
 }

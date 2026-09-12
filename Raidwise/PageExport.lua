@@ -123,8 +123,31 @@ function Addon:FlushExportToWindow()
 	end
 end
 
+local function ApplyLocale(page)
+	if page then
+		if page.desc then
+			page.desc:SetText(W.T("EXPORT_DESC"))
+		end
+		if page.namesLabel then
+			page.namesLabel:SetText(W.T("EXPORT_INCLUDE_NAMES"))
+		end
+		if page.exportBtn then
+			page.exportBtn.label:SetText(W.T("BTN_EXPORT_DATA"))
+		end
+		if page.selectBtn then
+			page.selectBtn.label:SetText(W.T("BTN_SELECT_ALL"))
+		end
+		if page.statusLabel then
+			local exported = page.exportBox and (page.exportBox:GetText() or "") ~= ""
+			page.statusLabel:SetText(exported and W.T("EXPORT_READY") or W.T("EXPORT_HINT"))
+		end
+	end
+end
+
 Addon.Pages.Export = {
 	id = "export",
 	LAYOUT_VERSION = LAYOUT_VERSION,
+	Refresh = ApplyLocale,
+	ApplyLocale = ApplyLocale,
 	Create = CreateExportPage,
 }

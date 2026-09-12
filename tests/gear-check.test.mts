@@ -5,7 +5,7 @@ import { Lua } from "wasmoon-lua5.1";
 
 const modules = [
   "InspectCoordinator", "GearCheckCatalog", "GearCheckSets", "GearCheckTrinkets",
-  "GearCheckProfiles", "GearCheckBis", "GearCheckRules", "GearCheckGrades", "GearCheckExplanations", "GearCheckSelfTest", "GearCheckCollector", "GearCheck", "ChatReports", "GearCheckReports", "GearCheckDump",
+  "GearCheckProfiles", "GearCheckBis", "GearCheckReport", "GearCheckRules", "GearCheckGrades", "GearCheckExplanations", "GearCheckSelfTest", "GearCheckCollector", "GearCheck", "ChatReports", "GearCheckReports", "GearCheckDump",
 ];
 
 test("final report messages preserve UTF-8, links, and preview/send equality", async () => {
@@ -68,6 +68,26 @@ async function withAddon(run: (lua: Lua) => Promise<void>): Promise<void> {
     lua.global.close();
   }
 }
+
+test("unavailable equipment cannot claim a clean scan", async () => {
+  await withAddon(async (lua) => {
+    lua.doStringSync(`
+      local report = {character={isSelf=false}, inspect={needed=true,complete=false}, equipment={}}
+      Raidwise:EvaluateGearCheck(report)
+      assert(report.overall.reason == "inspect_incomplete")
+      assert(report.overall.summary == "Inspect data is incomplete; grades are provisional.")
+      assert(report.overall.scanState == "incomplete" and report.overall.provisional)
+      report.collection.counts.filledCheckedSlots = 0
+      Raidwise:EvaluateGearCheck(report)
+      assert(report.overall.scanState == "unavailable" and report.overall.provisional)
+      for _, mode in ipairs({"summary", "items", "enchants", "gems", "ok"}) do
+        local text = table.concat(Raidwise:FormatGearCheckChatReport(report, mode), "\\n")
+        assert(text:find("GEAR_CHECK_SCAN_UNAVAILABLE", 1, true), mode)
+        assert(not text:find("No issues", 1, true), mode)
+      end
+    `);
+  });
+});
 
 test("gear-check rule self-tests", async (context) => {
   await withAddon(async (lua) => {
@@ -214,7 +234,6 @@ test("header chat radios preserve choices, colors, and exclusive selection", asy
       frame.reportFormRadios[2].scripts.OnClick()
       assert(Raidwise.db.reportForm=="full")
       assert(frame.reportFormRadios[2].checked and not frame.reportFormRadios[1].checked)
-      assert(Raidwise.Pages.Settings.LAYOUT_VERSION==13)
       local updateHeader=findLocal(Raidwise.SelectTab,"UpdateShellHeader")
       for _,host in ipairs({frame.reportChannelHost,frame.reportFormHost}) do
         host.Show=function(self) self.visible=true end

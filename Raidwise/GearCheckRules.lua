@@ -3,7 +3,7 @@
 local Addon = Raidwise
 
 -- Evaluation revision, independent of addon releases and catalog edits.
-Addon.GEAR_CHECK_RULESET_VERSION = "wotlk-3.3.5a-r1"
+Addon.GEAR_CHECK_RULESET_VERSION = "wotlk-3.3.5a-r3"
 
 local ENCHANTABLE = {
 	head = true,
@@ -763,20 +763,20 @@ function Addon:EvaluateGearCheck(report)
 		return findings
 	end
 
+	self:NormalizeGearCheckReport(report)
 	local character = report.character
 	local profile, source = self:GetGearCheckProfile(character.classFile, character.specTab, character.specKnown)
 	if source == "class" or not character.specKnown then
 		AddFinding(findings, "SPEC_UNKNOWN", "info", "character", nil, Msg("SPEC_UNKNOWN"))
 	end
-	local inspect = (report.collection and report.collection.inspect) or report.inspect or {}
-	local inspectIncomplete = inspect.needed and not inspect.complete
+	local inspectIncomplete = self:GetGearCheckScanState(report) ~= "complete"
 	if inspectIncomplete then
 		AddFinding(findings, "INSPECT_INCOMPLETE", "info", "character", nil, Msg("INSPECT_INCOMPLETE"))
 	end
 	if not profile then
 		AddFinding(findings, "PROFILE_MISSING", "info", "character", nil, Msg("PROFILE_MISSING"))
 		report.findings = findings
-		report.sets = CollectSetCounts(report.equipment or report.slots or {})
+		report.sets = CollectSetCounts(Addon:GetGearCheckEquipment(report))
 		self:AggregateGearCheckVerdicts(report)
 		self:AggregateGearCheckOverall(report)
 		return findings
@@ -787,7 +787,7 @@ function Addon:EvaluateGearCheck(report)
 		source = source,
 	}
 
-	local equipment = report.equipment or report.slots or {}
+	local equipment = Addon:GetGearCheckEquipment(report)
 	for index = 1, #equipment do
 		EvaluateSlot(findings, profile, equipment[index])
 	end

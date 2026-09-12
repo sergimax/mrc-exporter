@@ -208,6 +208,8 @@ Rows are clickable and open Character profile. Notes are stored on the history r
 
 ## Settings tab
 
+Layout v14 adds Changelog below Unit tooltips: the standard **28** px heading with **20** px section gap, a copy hint, and a URL copy box beside a **130 x 28** px Select all button with the standard **8** px gap.
+
 Theme has its own **28** px category bar below Language, with the standard **20** px section gap. Its **160 x 28** toggle sits **10** px below the heading; Startup page follows the toggle. Light uses warm pale panels and dark text; dark retains the original palette. Choice is saved in `RaidwiseDB.theme`.
 
 Addon labels and text inputs have no text shadow in the light theme. Switching back to dark restores each region's original shadow; shared Blizzard font objects and game tooltips are unchanged.

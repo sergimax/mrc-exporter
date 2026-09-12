@@ -1,148 +1,97 @@
-# Raidwise architecture
+# Raidwise architecture and task map
 
-Lua 5.1 / Interface **30300** (Wrath 3.3.5a). One global namespace (`Raidwise`); no Ace or embedded libs. Soft dependency: GearScore (`GearScore_GetScore` / `GS_Data`).
+Lua 5.1 / WoW 3.3.5a (`Interface: 30300`). Shipped code lives in `Raidwise/` on the single `Raidwise` namespace. GearScore is optional. Rules: [AGENTS.md](../AGENTS.md). Checks: [tests/README.md](../tests/README.md).
 
-## TOC load order
+## Find the owner first
 
-From [`Raidwise/Raidwise.toc`](../Raidwise/Raidwise.toc):
+Paths below are relative to `Raidwise/`. Search the entry point before reading its helpers or callers.
 
-```text
-Raidwise.lua          bootstrap, DB, events, slash
-Locale.lua            enUS / ruRU + Addon:T
-CharacterExport.lua   gear / bags / lockout collectors + JSON export
-CharacterLockouts.lua account-wide lockout SV + cooldown table model
-PartyRoster.lua       party/raid snapshots, inspect queue, GS/iLvl
-RaidRoles.lua         role classification, raid buff icons, flask/food aura scan, role GS averages
-RaidComposition.lua   composition effect catalog + AnalyzeRaidComposition
-PlayerHistory.lua     history store + personal rating domain API
-UIWidgets.lua         shared UI helpers (panels, buttons, icons, layout badge)
-UnitTooltips.lua      GameTooltip unit lines for personal/community ratings
-CharacterProfile.lua  character profile popup
-GearCheckCatalog.lua  enchant / gem seed catalogs
-GearCheckSets.lua     T9/T10 set-piece ids (informational)
-GearCheckTrinkets.lua per-role BiS + progression trinket id pools
-GearCheckProfiles.lua class + 30-spec rule profiles
-GearCheckBis.lua      generated spec BiS item-ID sets (S grade)
-GearCheckRules.lua    findings engine + item verdicts + overall (EvaluateGearCheck)
-GearCheckSavedReports.lua  manual save / load / prune (~14 days)
-GearCheck.lua         collector + normalize (schemaVersion 3) + evaluate hook + dump
-PageCooldowns.lua     … PageInfo.lua   content pages (Addon.Pages.*)
-ExporterWindow.lua    main shell (grouped left menu, title, status, tab wiring)
+| Task | Owner files | Entry points / boundaries |
+|---|---|---|
+| Bootstrap, DB, slash, report transport | `Raidwise.lua` | Lifecycle, slash handlers, `SendReportChat` |
+| Language | `Locale.lua` | `Addon:T`; search exact keys in both languages |
+| Chat preparation and gear reports | `ChatReports.lua`, `GearCheckReports.lua` | `PrepareReportMessage`, `BuildGearCheckChatMessages` |
+| Gear/bags/currency export, lockouts | `CharacterExport.lua`, `CharacterLockouts.lua` | `FormatEquippedGearExport`, `CollectCharacterCurrency`, `BuildCooldownTable` |
+| Inspect timing, identity, retries | `InspectCoordinator.lua`, `GearCheck.lua`, `PartyRoster.lua` | `StartInspectRequest`, `RetryInspectRequest`, `StartGearCheckUnitScan`, `CancelGearCheckScan` |
+| Item links, sockets and gems | `GearCheckCollector.lua` | `CollectGearCheckObservation`; private `ParseItemLinkParts`, `NormalizeItem` |
+| Report compatibility and completeness | `GearCheckReport.lua` | `NormalizeGearCheckReport`, `GetGearCheckScanState`; canonical nested fields win over legacy aliases |
+| Findings, grades, explanations | `GearCheckRules.lua`, `GearCheckGrades.lua`, `GearCheckExplanations.lua` | `EvaluateGearCheck`, `AggregateGearCheckOverall`; internal `GearCheckPolicy` |
+| Saved reports and dumps | `GearCheckSavedReports.lua`, `GearCheckDump.lua` | `SaveGearCheckReport`, `FormatGearCheckDump`; dump module owns asynchronous raid export jobs |
+| Rosters and shared refresh | `PartyRoster.lua`, `RosterRefresh.lua` | `BuildRaidGroups`, `BuildRosterSnapshot`, `ScheduleRosterRefresh` |
+| Roles, consumables, composition | `RaidRoles.lua`, `RaidComposition.lua` | `UnitConsumableStatus`, `AnalyzeRaidComposition` |
+| Rating catalogs/access | `PlayerHistory.lua` | `GetPersonalRating`, `GetCommunityRating`, normalization |
+| History, migrations, persistence | `PlayerHistoryStore.lua` | `RecordCurrentGroupHistory`, `SavePersonalRatingForGuid`, `SaveHistoryEventsForGuid`, `SaveProfileNotesForGuid` |
+| Unsaved profile edits | `ProfileDraft.lua` | `CreateProfileDraft`, `ToggleProfileDraftTag`, `AddProfileDraftEvent` |
+| Profile window | `CharacterProfile.lua`, `ProfilePanels.lua` | Window, editing and commands in `CharacterProfile`; tab construction and history rendering in `ProfilePanels` |
+| Rating display and unit tooltips | `RatingPresentation.lua`, `UnitTooltips.lua` | `GetTooltipSettings`, `BuildUnitTooltipRatingLinesForMember`; tooltip hooks in `UnitTooltips` |
+| Theme / shared controls | `UITheme.lua`, `UIWidgets.lua`, `RosterWidgets.lua` | Stable theme tables; generic controls; roster/grade/rating controls |
+| Raid and target gear views | `PageRaid.lua`, `PageGearCheckTarget.lua` | `RefreshRaidRosterView`, `RefreshGearCheckTargetView`, `ShowGearCheckReport` |
+| Other pages | `PageCooldowns.lua`, `PageExport.lua`, `PageComposition.lua`, `PageHistory.lua`, `PageSettings.lua`, `PageInfo.lua` | `Addon.Pages.*` registrations |
+| Shell and navigation | `ExporterWindow.lua`, `Minimap.lua` | `CreateMainFrame`, `SelectTab`, `RefreshLocalizedUI`; separate minimap entry point |
+
+## Load order and contracts
+
+[Raidwise.toc](../Raidwise/Raidwise.toc) is the authoritative executable load order. Read it when adding/moving modules; do not maintain a duplicate full list here.
+
+- Bootstrap creates the namespace; later modules attach methods before normal event-driven use.
+- `InspectCoordinator` precedes roster consumers and owns inspect API calls/events. Roster and gear retain their queues and result handling.
+- History catalogs, store, presentation, drafts and profile panels precede the profile window.
+- `UITheme` precedes `UIWidgets`, then `RosterWidgets`, then views. Theme/color tables retain identity across theme changes.
+- Gear catalogs and report compatibility helpers precede rules, grades, explanations and self-tests. Saved reports and collector precede `GearCheck`; reports and dumps follow it. Pages load before the shell.
+
+### Gear flow
+
+`StartGearCheckUnitScan` requests inspect through the coordinator. `CollectGearCheck` supplies readiness to `CollectGearCheckObservation(unit, inspectReady)` and retains the observation. Collection does not evaluate. Finalization calls `EvaluateGearCheck`, which produces findings and invokes grade aggregation. Formatting belongs in reports, dumps and explanations.
+
+Schema 3 retains compatibility aliases (`equipment`/`slots`, nested/top-level inspect and counts). `NormalizeGearCheckReport` is the adapter at collection, evaluation and snapshot creation boundaries; canonical fields are `character`, `equipment`, and `collection`. Equipment/inspect accessors centralize reads of legacy reports. Rule and catalog revisions are independent of addon semver; saved reports retain original metadata. See [Gear-Check-Progress.md](Gear-Check-Progress.md) for compatibility and grading details.
+
+`GetGearCheckScanState` derives `complete`, `incomplete`, or `unavailable` independently of S/A/B/C/D grades. Overall results carry optional `scanState`, `scanReason`, and `provisional` metadata. Views and chat show incomplete/unavailable labels; raid/minimap readiness counts exclude those reports. Diagnostic grades remain available for partial observations.
+
+### Refresh and reputation flow
+
+`ScheduleRosterRefresh` merges same-frame requests. Each pass builds one snapshot shared by history and the visible raid/composition page. Hidden views are not redrawn; history still records. Snapshots are not cached across passes. Inspect queue advancement is immediate; consumable icons have their own targeted refresh path.
+
+Profile commands persist drafts through the store and refresh rating views. Notes have separate Save/Reset behavior. `InitializeHistoryStore` migrates entries at addon initialization, before UI construction; explicit write methods also normalize entries. Rating/history getters do not initialize or migrate SavedVariables. Community ratings include mock fallback data; opinion exchange is not implemented.
+
+Pages register `Create`, `Refresh(page, entering)`, and `ApplyLocale(page)`. The shell dispatches these methods; page modules own control labels and entry-specific collection. `entering=true` requests the original tab-entry work (lockout requests, roster refresh or history recording); locale refresh omits it. Public refresh wrappers remain compatible. Profile extraction preserves anchors, dimensions and named-frame versions.
+
+### SavedVariables and versions
+
+`RaidwiseDB` is bound as `Addon.db`; `MrcExporterDB` is legacy migration input.
+
+| Key | Owner / purpose |
+|---|---|
+| `characters` | `CharacterLockouts`: account-wide lockouts/currency |
+| `history` | `PlayerHistoryStore`: GUID-keyed meetings, personal ratings, events, private notes, changes |
+| `gearCheckSaved` | `GearCheckSavedReports`: snapshots and retention (~14 days) |
+| `tooltip` | `RatingPresentation` / Settings: rating tooltip visibility |
+| `locale`, `theme`, `startupTab`, `reportChannel`, `reportForm` | Preferences consumed by locale, theme, shell and reporting |
+
+See [Reputation.md](Reputation.md) for reputation data. Addon semver, rule/catalog revisions, and layout versions serve different purposes. Geometry rules live in `AGENTS.md`; current layouts and dimensions live in [UI-Views.md](UI-Views.md) and [UI-Sizes.md](UI-Sizes.md).
+
+## Focused searches
+
+Start with named files from the task table, or `Raidwise/` and `tests/`. Examples from the repository root (PowerShell-compatible):
+
+```powershell
+rg -n 'StartGearCheckUnitScan|TryCollectPending' Raidwise/GearCheck.lua
+rg -n -C 6 'gemFieldsComplete' Raidwise/GearCheckCollector.lua
+rg -n 'SETTINGS_CHANGELOG' Raidwise/Locale.lua Raidwise/PageSettings.lua
+rg -n '^function Addon:|^local function' Raidwise/CharacterProfile.lua
+git diff --stat
+git diff -- Raidwise/GearCheck.lua tests/scan.test.mts
 ```
 
-Order is the dependency graph: bootstrap → locale → domain → shared widgets → tooltips → profile → gear-check (catalog → sets → profiles → rules → **saved reports** → collector) → pages → shell.
+Include these paths deliberately when relevant; no global search exclusion hides them:
 
-## Layers
+| Path | Use |
+|---|---|
+| `Raidwise/GearCheckBis.lua` | Generated IDs: use `scripts/generate-gear-check-bis.js`, which reads sibling web-app presets or `RAIDWISE_BIS_PRESETS`. |
+| `Raidwise/GearCheckCatalog.lua`, `GearCheckSets.lua`, `GearCheckTrinkets.lua`, `GearCheckProfiles.lua` | Runtime reference/rule data. Search the ID/spec; these are not all generated. |
+| `tools/` | Catalog research scripts, scrape output and seeds; not shipped. |
+| `gear-check-debug/`, `screenshots/` | Debug visualizations and UI references. |
+| `____GEAR_REPORTS_TO_CHECK/`, `____EXAMPLES/` | Ignored local reports/examples; use explicit paths and `rg --no-ignore` when investigating them. |
+| `node_modules/`, `package-lock.json` | Dependency/runtime investigations only. |
+| `types/` | Export/report contracts; review when changing data shapes. |
 
-| Layer | Files | Role |
-|-------|-------|------|
-| Bootstrap | `Raidwise.lua` | `Addon.db`, lifecycle, slash `/raidwise` / `/rw` (open), `close` (hide) |
-| i18n | `Locale.lua` | Strings; `SetLocale` → `RefreshLocalizedUI` |
-| Domain | Export, Lockouts, PartyRoster, RaidRoles, Composition, History, GearCheck | Data and analysis; no frame creation |
-| Shared UI | `UIWidgets.lua` | Plain panels, buttons, icons, drag, copy box, layout version label |
-| UI | Profile + pages + shell | Frames, refresh, localization refresh |
-
-## SavedVariables
-
-TOC: `RaidwiseDB`, `MrcExporterDB` (legacy migrate-only).
-
-| Key | Owner | Purpose |
-|-----|-------|---------|
-| `enabled` | `Raidwise.lua` | Addon on/off (status) |
-| `includeGearNames` | Export page / `CharacterExport` | JSON export option |
-| `locale` | `Locale.lua` | `enUS` / `ruRU` |
-| `startupTab` | Settings / shell | Left-menu page id opened on `/raidwise` (default `cooldowns`; `info` not allowed) |
-| `reportChannel` | Settings / `Raidwise.lua` | Chat destination for reports (`auto` / `self` / `party` / `raid` / `raidwarning` / `guild` / `officer` / `say`) |
-| `reportForm` | Settings / `Raidwise.lua` | Gear check chat wording (`short` default / `full`) |
-| `tooltip` | `UnitTooltips.lua` / Settings | Hide flags for unit tooltip rating lines |
-| `characters` | `CharacterLockouts.lua` | Per-character lockout columns |
-| `history` | `PlayerHistory.lua` | GUID-keyed meetings, opinion/tags/facts, events, notes |
-| `gearCheckSaved` | `GearCheckSavedReports.lua` | Manual Gear Check snapshots (`reports`, `nextId`); ~14-day retention |
-
-Bound as `Addon.db` after `EnsureDB`. Expired Gear Check reports are pruned on addon load and on save.
-
-History personal reputation shape (see [Reputation.md](Reputation.md)):
-
-- `history[guid].rating.personal` — `opinion`, `tags`, `facts`, `createdAt`, `updatedAt`, `creatorId`
-- `history[guid].events[]` — typed occurrences with `eventAt` + context
-- `history[guid].notes` — private memo (never shared)
-- `history[guid].changes[]` — local change log (`opinion`, `tags`, `facts`, `event_add`, `event_remove`)
-- `history[guid].meetCount` — party/raid encounters with this character (first meet = 1; +1 after ≥30 min since `lastSeenAt`). Each increment also appends an attendance event `same_party` (`In the same party`) with zone/instance context.
-
-## Two version concepts
-
-| Kind | Where | Shown | Purpose |
-|------|-------|-------|---------|
-| **Addon semver** | `Addon.version` + TOC `## Version` | Menu title bar (e.g. `v1.18.0`) | Release / changelog |
-| **Layout version** | `*_LAYOUT_VERSION` per view | Shell title bar next to page name (`vN`); profile title bar; shell constant is rebuild-only | Force UI rebuild when structure changes |
-
-Bump layout versions when sizes, named frames, or control layout change. Do **not** bump for pure locale string edits. Keep docs in sync (`UI-Views.md`, `UI-Sizes.md`).
-
-## Public UI refresh API
-
-Optional duck-typed methods on `Raidwise` (callers check `if self.Foo then`):
-
-| Method | Defined in | Used by |
-|--------|------------|---------|
-| `CreateMainFrame` / `ShowMainFrame` / `HideMainFrame` / `ToggleMainFrame` | Shell | Bootstrap, slash |
-| `GetStartupTab` / `SetStartupTab` | Shell | Settings startup page (`RaidwiseDB.startupTab`) |
-| `SelectTab` | Shell | Menu buttons, `RefreshLocalizedUI` |
-| `RefreshLocalizedUI` | Shell | `SetLocale` |
-| `RefreshCooldownTable` | Cooldowns page | Lockout events |
-| `FlushExportToWindow` | Export page | Lockout export path |
-| `RefreshRaidRosterView` | Raid page | Roster, gear check, guild in tooltip |
-| `RefreshRaidConsumableIcons` | Raid page | `UNIT_AURA` flask/food icons (throttled) |
-| `RefreshCompositionView` | Composition page | Roster, guild |
-| `RefreshHistoryView` | History page | History record, profile |
-| `ShowRaidCharacterWindow` | Profile | Party / raid / history clicks |
-| `SelectProfileTab` | Profile | Tab bar, open defaults |
-| `CommitProfileRating` | Profile | **Save and Update** button |
-| `RefreshRatingViews` | Profile | After rating save / profile close |
-| `RefreshPartyData` | `PartyRoster.lua` | Fan-out refresh (below) |
-| `GetReportChannel` / `SetReportChannel` / `ResolveReportChatType` / `SendReportChat` | Settings / `Raidwise.lua` | Report buttons (raid, composition, gear check) |
-| `OpenGearCheckTarget` / `RefreshGearCheckTargetView` / `ShowGearCheckReport` / `StartGearCheckScan` / `StartGearCheckRaidScan` / `EvaluateGearCheck` / `GearCheckRulesSelfTest` / `PrintGearCheckReport` / `RunGearCheckChatReport` | GearCheck stack + target/raid pages | `/rw gearcheck …`, Scan / Report buttons |
-| `SaveGearCheckReport` / `ListGearCheckSavedReports` / `GetGearCheckSavedReport` / `DeleteGearCheckSavedReport` / `PruneExpiredGearCheckReports` | `GearCheckSavedReports.lua` | Save report / saved list UI |
-
-## Unit tooltips
-
-`UnitTooltips.lua` registers on `GameTooltip` (`OnTooltipSetUnit`, cleared/hide handlers, Shift refresh). No separate refresh method — lines rebuild on the next tooltip show.
-
-| Method | Defined in | Role |
-|--------|------------|------|
-| `GetTooltipSettings` | `PlayerHistory.lua` | Read `RaidwiseDB.tooltip` hide flags |
-| `BuildUnitTooltipRatingLinesForMember` | `PlayerHistory.lua` | Personal + community lines for a history entry |
-| `GetTooltipPreviewSample` | `PlayerHistory.lua` | Settings preview sample data |
-
-Settings keys: `hidePersonal`, `hidePersonalTags`, `hideCommunity`, `hideCommunityTags` (all default `false`).
-
-## Domain API (selected)
-
-Cross-module entry points on `Raidwise` (domain files do not create frames):
-
-| Method | Defined in | Role |
-|--------|------------|------|
-| `BuildPartyRoster` / `BuildRaidGroups` / `BuildHistoryRoster` | `PartyRoster.lua` / `PlayerHistory.lua` | Roster rows for pages |
-| `RefreshPartyData` | `PartyRoster.lua` | Rebuild rosters + fan-out page refresh |
-| `AnalyzeRaidComposition` | `RaidComposition.lua` | Composition checklist for current group |
-| `BuildCooldownTable` | `CharacterLockouts.lua` | Cooldowns tab rows |
-| `HistoryProfileForMember` / `MergeRatingIntoMember` | `PlayerHistory.lua` | Profile + table opinion/tags |
-| `UnitConsumableStatus` / `SummarizeRaidConsumables` | `RaidRoles.lua` | Flask / food (or battle + guardian elixirs) from `UnitBuff`; roster present/missing lists |
-| `SavePersonalRatingForGuid` / `SaveHistoryEventsForGuid` / `SaveProfileNotesForGuid` | `PlayerHistory.lua` | Persist profile edits |
-| `RecordCurrentGroupHistory` / `AddHistoryEventForGuid` | `PlayerHistory.lua` | History **Refresh** + group meetings (`same_party` event when `meetCount` increments) |
-| `FormatEquippedGearExport` | `CharacterExport.lua` | Export tab JSON |
-
-## Refresh fan-out
-
-`Addon:RefreshPartyData(refreshGearScore)` (PartyRoster):
-
-1. Rebuilds party/raid roster data (and inspect queue as needed).
-2. Calls `RefreshRaidRosterView` and `RefreshCompositionView` when those methods exist.
-
-Group roster events (`PARTY_MEMBERS_CHANGED` / `RAID_ROSTER_UPDATE`) call `RefreshPartyData` when the main window is open on raid/composition; otherwise they only record history. `UNIT_AURA` refreshes flask/food icons on Raid roster only (coalesced ~0.2s; no inspect).
-
-Profile save/close refreshes the visible raid or history tab.
-
-## Known limitations
-
-- Domain → UI coupling is intentional but soft (optional method checks). Prefer keeping refresh orchestration on the shell/pages, not deeper into collectors.
-- Named frames use versioned suffixes (`…V` .. layout version) so layout rebuilds do not collide with stale global frames.
+Keep this map current when ownership changes. Put detailed behavior in its domain document rather than duplicating specifications here.

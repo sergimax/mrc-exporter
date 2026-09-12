@@ -85,8 +85,7 @@ local function IsInspectIncomplete(report)
 	if not report then
 		return false
 	end
-	local inspect = (report.collection and report.collection.inspect) or report.inspect or {}
-	return inspect.needed == true and inspect.complete ~= true
+	return Addon:GetGearCheckScanState(report) ~= "complete"
 end
 
 local function EnchantIsMaxLevel(enchant)
@@ -397,7 +396,7 @@ local function AggregateCategoryGrade(report, categoryMap, qualifiesForGoodFn, a
 		)
 	end
 
-	local equipment = report.equipment or report.slots or {}
+	local equipment = Addon:GetGearCheckEquipment(report)
 	for index = 1, #equipment do
 		local slot = equipment[index]
 		local verdict = SlotVerdictForCategories(
@@ -473,7 +472,7 @@ function Addon:AggregateGearCheckVerdicts(report)
 	end
 
 	local inspectIncomplete = IsInspectIncomplete(report)
-	local equipment = report.equipment or report.slots or {}
+	local equipment = Addon:GetGearCheckEquipment(report)
 	for index = 1, #equipment do
 		local slot = equipment[index]
 		slot.verdict = nil
@@ -629,6 +628,12 @@ function Addon:AggregateGearCheckOverall(report)
 		overall.summary = string.format("%d item(s) are A.", verdicts.a or 0)
 	end
 
+	if IsInspectIncomplete(report) then
+		overall.reason = "inspect_incomplete"
+		overall.summary = "Inspect data is incomplete; grades are provisional."
+	end
+	overall.scanState, overall.scanReason = self:GetGearCheckScanState(report)
+	overall.provisional = overall.scanState ~= "complete"
 	report.overall = overall
 	return overall
 end

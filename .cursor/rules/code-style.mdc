@@ -1,9 +1,0 @@
----
-description: Code style for this WotLK Lua addon
-alwaysApply: true
----
-
-# Code style
-
-Read and follow the Code style section in [AGENTS.md](../../AGENTS.md).
-The repository-root AGENTS.md is the shared source of project rules.

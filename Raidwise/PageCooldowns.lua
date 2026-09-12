@@ -635,8 +635,37 @@ function Addon:RefreshCooldownTable()
 	W.LayoutTableScrollBars(page)
 end
 
+local function ApplyLocale(page)
+	if page then
+		if page.hint then
+			page.hint:SetText(W.T("CD_HINT"))
+		end
+		if page.refreshBtn then
+			page.refreshBtn.label:SetText(W.T("BTN_REFRESH"))
+		end
+		if page.emptyLabel then
+			page.emptyLabel:SetText(W.T("CD_EMPTY"))
+		end
+		if page.instanceHeader then
+			page.instanceHeader:SetText(W.T("CD_INSTANCE"))
+		end
+		if page.noRowsLabel then
+			page.noRowsLabel:SetText(W.T("CD_NO_ROWS"))
+		end
+	end
+end
+
 Addon.Pages.Cooldowns = {
 	id = "cooldowns",
 	LAYOUT_VERSION = LAYOUT_VERSION,
+	Refresh = function(_, entering)
+		if entering then
+			Addon.pendingLockoutTable = true
+			Addon:SaveCurrentCharacterLockouts()
+			RequestRaidInfo()
+		end
+		Addon:RefreshCooldownTable()
+	end,
+	ApplyLocale = ApplyLocale,
 	Create = CreateCooldownsPage,
 }

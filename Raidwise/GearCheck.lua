@@ -44,10 +44,8 @@ local function SetInspectComplete(report, complete)
 	if not report then
 		return
 	end
-	local inspect = report.inspect
-	if not inspect and report.collection then
-		inspect = report.collection.inspect
-	end
+	Addon:NormalizeGearCheckReport(report)
+	local inspect = report.collection.inspect
 	if inspect then
 		inspect.complete = complete and true or false
 	end
@@ -67,7 +65,7 @@ local function ReportGradesNeedRefresh(report)
 	if not report then
 		return false
 	end
-	local inspect = (report.collection and report.collection.inspect) or report.inspect or {}
+	local inspect = Addon:GetGearCheckInspect(report)
 	if not inspect.complete then
 		return false
 	end
@@ -126,6 +124,7 @@ function Addon:SetLastGearCheckReport(report, status)
 			report.collection.scanStatus = status
 		end
 	end
+	self:NormalizeGearCheckReport(report)
 	self:EnsureGearCheckGrades(report)
 	lastReport = report
 end
@@ -283,6 +282,29 @@ local function TryCollectPending(forceComplete)
 	end
 	local filled = (report.collection and report.collection.counts and report.collection.counts.filledCheckedSlots) or 0
 	local specKnown = report.character and report.character.specKnown
+	-- A stripped inspect can look exactly like entirely empty sockets. Require
+	-- a fresh inspect response before accepting that result as missing gems.
+	local emptyItems = {}
+	local hasGems = false
+	for _, slot in ipairs(report.equipment or {}) do
+		local item = slot.policy == "CHECKED" and slot.item
+		if item then
+			hasGems = hasGems or #(item.gems or {}) > 0
+			if item.sockets and item.sockets.emptyConfirmed then
+				emptyItems[#emptyItems + 1] = item
+			end
+		end
+	end
+	if #emptyItems > 0 and not hasGems and not (pendingGemRetry and pendingInspectReady) then
+		for _, item in ipairs(emptyItems) do
+			item.sockets.emptyConfirmed = false
+			item.sockets.gemDataUncertain = true
+			item.sockets.empty = 0
+			for socketIndex in pairs(item.sockets.states or {}) do
+				item.sockets.states[socketIndex] = "unresolved"
+			end
+		end
+	end
 	local gemsReady = not EquipmentHasUncertainGems(report.equipment)
 	if filled > 0 and specKnown and pendingInspectReady and gemsReady then
 		FinalizeGearCheckReport(report, true)

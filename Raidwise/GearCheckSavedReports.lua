@@ -60,7 +60,7 @@ function Addon:GearCheckCharacterKey(report)
 end
 
 local function PrepareReportSnapshot(report)
-	local snapshot = DeepCopy(report)
+	local snapshot = Addon:NormalizeGearCheckReport(DeepCopy(report))
 	if snapshot.character then
 		snapshot.character.unit = nil
 	end

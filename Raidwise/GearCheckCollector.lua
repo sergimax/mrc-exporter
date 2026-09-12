@@ -1035,19 +1035,8 @@ function Addon:CollectGearCheckObservation(unit, inspectReady)
 			},
 		},
 		phase = 5,
-		name = name,
-		isSelf = isSelf,
-		specKnown = identity.specKnown,
-		inspect = inspect,
-		stats = {
-			checkedSlots = checked,
-			filledCheckedSlots = filled,
-			gearScore = gearScore,
-			averageIlvl = averageIlvl,
-		},
-		slots = equipment,
 	}
 
-	return report
+	return self:NormalizeGearCheckReport(report)
 end
 

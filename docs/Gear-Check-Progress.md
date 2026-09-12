@@ -18,6 +18,7 @@ the current boundaries after those extractions.
 | `InspectCoordinator.lua` | Exclusive inspect API/event ownership, request identity and deadlines; `StartInspectRequest`, `RetryInspectRequest`, completion/cancellation |
 | `PartyRoster.lua`, `RosterRefresh.lua` | Member collection and work lists; `BuildRosterSnapshot`, `ScheduleRosterRefresh`; snapshots live for one refresh pass |
 | `GearCheckCollector.lua` | Live item/gem reads and normalization; `CollectGearCheckObservation(unit, inspectReady)` returns a snapshot |
+| `GearCheckReport.lua` | Canonical nested report fields with legacy alias adapters; shared complete/incomplete/unavailable scan state independent of diagnostic grades |
 | `GearCheck.lua` | Scan orchestration and last-report state; `CollectGearCheck`, target/raid scan APIs, `CancelGearCheckScan` |
 | `GearCheckRules.lua` | Findings, meta activation, set counts; `EvaluateGearCheck` calls grading afterward |
 | `GearCheckGrades.lua` | Slot/category/overall aggregation; shares internal eligibility policy with explanations |
@@ -28,6 +29,7 @@ the current boundaries after those extractions.
 | `GearCheckSelfTest.lua` | Shipped rule fixtures, retaining `/rw gearcheck test` |
 | `PlayerHistory.lua`, `PlayerHistoryStore.lua` | Rating catalogs/normalization versus history storage, migration, events, and notes |
 | `ProfileDraft.lua`, `RatingPresentation.lua` | Plain draft edits versus display labels, tooltips, and chat marks |
+| `ProfilePanels.lua` | Profile tab construction and history-list rendering; window and edit/commit orchestration remain in `CharacterProfile.lua` |
 | `UITheme.lua`, `UIWidgets.lua`, `RosterWidgets.lua` | Theme bindings, generic controls, and domain-specific rendering respectively |
 | `Page*.lua`, `CharacterProfile.lua`, `ExporterWindow.lua` | Render views, invoke services, declare header report capabilities, and assemble panels |
 
@@ -42,7 +44,7 @@ creation. Keep internal state local or on the single `Raidwise` namespace.
 |----------|---------------------------|-------------|
 | Addon semver | `1.22.0`; TOC and `Addon.version` | A release is explicitly requested |
 | Report schema | `3`; `GEAR_CHECK_SCHEMA_VERSION` in collector | The normalized report contract changes; update `types/GearCheck.ts` and compatibility handling |
-| Evaluation rules | `wotlk-3.3.5a-r1`; `GEAR_CHECK_RULESET_VERSION` in rules | Finding, eligibility, aggregation, or unknown/incomplete-data policy changes; increment `rN` |
+| Evaluation rules | `GEAR_CHECK_RULESET_VERSION` in rules | Finding, eligibility, aggregation, or unknown/incomplete-data policy changes; increment `rN` |
 | Catalog data | `catalog-2026-09-10-gems3`; `GEAR_CHECK_DATA_VERSION` | Gem/enchant data, profiles, BiS/trinket pools, or set data change; assign a new catalog revision |
 | UI layout | Per-shell/page/profile constants | Geometry or frame structure changes under AGENTS.md |
 
@@ -53,6 +55,14 @@ both rules and catalog data must update both revisions. `r1` establishes the
 independent baseline; it does not assert equivalence with every legacy release.
 
 ### Saved reports
+
+Collection, evaluation and saving normalize through the report adapter. Canonical
+`character`, `equipment`, and `collection` fields win if legacy aliases disagree;
+new snapshots continue carrying aliases for schema-3 compatibility. The shared
+scan-state accessor drives target/raid labels, chat, dumps and readiness counts.
+Diagnostic S/A/B/C/D grades remain separate and are marked provisional when
+collection is incomplete or unavailable. No existing snapshot is silently
+reclassified as a fresh scan.
 
 Keep `RaidwiseDB.gearCheckSaved`, entry IDs, existing public methods, and slash
 commands stable. The envelope stores `rulesetVersion` and `dataVersion`; the

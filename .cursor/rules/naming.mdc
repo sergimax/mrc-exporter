@@ -1,9 +1,0 @@
----
-description: Naming conventions for files and symbols
-alwaysApply: true
----
-
-# Naming
-
-Read and follow the Naming section in [AGENTS.md](../../AGENTS.md).
-The repository-root AGENTS.md is the shared source of project rules.

@@ -31,10 +31,10 @@ function Addon:BuildMinimapRaidSummary()
 		end
 		local key = self:GearCheckCharacterKey({ character = member })
 		local report = reports[key]
-		local inspect = report and ((report.collection and report.collection.inspect) or report.inspect)
+		local inspect = report and Addon:GetGearCheckInspect(report)
 		local overall = report and report.overall or {}
 		local gear, enchant = overall.gearGrade or overall.status, overall.enchantSocketGrade
-		if inspect and inspect.complete and grades[gear] and grades[enchant] then
+		if inspect and Addon:GetGearCheckScanState(report) == "complete" and grades[gear] and grades[enchant] then
 			summary.scanned = summary.scanned + 1
 			if grades[gear] >= 4 or grades[enchant] >= 4 then
 				summary.unready[#summary.unready + 1] = {

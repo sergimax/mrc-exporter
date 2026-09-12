@@ -85,7 +85,7 @@ function Addon:FormatGearCheckDump(report)
 	local collection = report.collection or {}
 	local inspect = collection.inspect or report.inspect or {}
 	local counts = collection.counts or report.stats or {}
-	local equipment = report.equipment or report.slots or {}
+	local equipment = Addon:GetGearCheckEquipment(report)
 	local findings = report.findings or {}
 	local profile = report.profile
 	local verdicts = report.verdicts
@@ -145,6 +145,8 @@ function Addon:FormatGearCheckDump(report)
 		gearScore ~= nil and tostring(gearScore) or "-",
 		averageIlvl ~= nil and tostring(averageIlvl) or "-"
 	)
+	local scanState, scanReason = Addon:GetGearCheckScanState(report)
+	lines[#lines + 1] = "Scan: " .. scanState .. (scanReason and " (" .. scanReason .. ")" or "")
 	if inspect.tooFar then
 		lines[#lines + 1] = "Inspect: too far"
 	elseif inspect.needed and not inspect.canInspect then

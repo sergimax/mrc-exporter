@@ -1,9 +1,0 @@
----
-description: Conventional Commits format for git messages
-alwaysApply: true
----
-
-# Commit messages
-
-Read and follow the Commit messages section in [AGENTS.md](../../AGENTS.md).
-The repository-root AGENTS.md is the shared source of project rules.
